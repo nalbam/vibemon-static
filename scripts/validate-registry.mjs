@@ -15,6 +15,8 @@ const EYE_TYPES = new Set(['normal', 'glasses', 'blink', 'happy']);
 const EFFECTS = new Set(['none', 'sparkle', 'thinking', 'question', 'zzz', 'exclamation']);
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 const CANVAS = 128;
+// Palette slots the 3D rig paints (vibemon-engine-3d.js _applyTheme).
+const THEME_KEYS = ['body', 'belly', 'accent', 'eye', 'blush', 'flame'];
 
 const errors = [];
 const check = (ok, message) => { if (!ok) errors.push(message); };
@@ -72,6 +74,18 @@ if (characters) {
       `${at}: eyes needs w/h (or size) within 0..${CANVAS}`);
     check(anchorInRange(ch?.effect?.x) && anchorInRange(ch?.effect?.y),
       `${at}: effect anchor must be within 0..${CANVAS}`);
+    // 3D palette: required so a character added here renders in the 3D
+    // engine without a code change in the consuming app.
+    const theme = ch?.theme;
+    check(!!theme && typeof theme === 'object', `${at}: theme required (3D palette)`);
+    if (theme && typeof theme === 'object') {
+      for (const key of THEME_KEYS) {
+        check(HEX_COLOR.test(theme[key] ?? ''), `${at}: theme.${key} must be #RRGGBB, got ${theme[key]}`);
+      }
+      for (const key of Object.keys(theme)) {
+        check(THEME_KEYS.includes(key), `${at}: theme has unknown key "${key}"`);
+      }
+    }
   }
 
   // Image files and registry entries must match 1:1.

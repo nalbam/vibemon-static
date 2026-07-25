@@ -2,13 +2,13 @@
 
 ## Project Structure & Module Organization
 
-This repository publishes canonical VibeMon assets directly from `docs/` through GitHub Pages. Registry data lives in `docs/data/`, 128×128 character PNGs in `docs/characters/`, and shared rendering sources in `docs/js/` and `docs/css/`. `docs/index.html` only redirects visitors to the main site. Use `scripts/validate-registry.mjs` for registry checks. The `prompts/` directory contains sprite-generation references and Python utilities; generated outputs should not be committed unless they are intentional project assets.
+This repository publishes canonical VibeMon assets directly from `docs/` through GitHub Pages. Registry data lives in `docs/data/`, 128×128 character PNGs in `docs/characters/`, and shared rendering sources in `docs/js/` and `docs/css/` — the 2D engine, the 3D engine (`vibemon-engine-3d.js` with `monster-states.js`), and the speech bubble. The 3D engine takes its three.js namespace from the consumer as `options.THREE`; never import a renderer library here. `docs/index.html` only redirects visitors to the main site. Use `scripts/validate-registry.mjs` for registry checks. The `prompts/` directory contains sprite-generation references and Python utilities; generated outputs should not be committed unless they are intentional project assets.
 
 ## Build, Test, and Development Commands
 
 There is no package installation or compile step. Use Node.js 20, matching CI.
 
-- `node scripts/validate-registry.mjs` validates JSON structure, supported state values, image references, and 128×128 coordinate bounds.
+- `node scripts/validate-registry.mjs` validates JSON structure, supported state values, image references, 128×128 coordinate bounds, and each character's 3D `theme` palette.
 - `python3 prompts/verify_sprite.py path/to/sheet.png` inspects a generated sprite sheet. It requires Pillow.
 - `python3 -m http.server 8000 --directory docs` serves the published tree locally at `http://localhost:8000`.
 
@@ -26,4 +26,4 @@ GitHub Actions runs the registry validator on pushes and pull requests to `main`
 
 Recent history follows Conventional Commit-style subjects such as `feat: support model-scoped usage label` and `docs: update README references`. Use an imperative, scoped summary with an appropriate prefix (`feat:`, `fix:`, `docs:`, or `ci:`), and keep each commit focused.
 
-Pull requests should explain the user-visible or registry impact, list validation performed, and link related issues. Include before/after screenshots for sprite, CSS, or rendering changes. Adding a character requires both its registry entry and matching 128×128 PNG. Never commit `.env`, `.env.local`, API keys, or generated files containing secrets.
+Pull requests should explain the user-visible or registry impact, list validation performed, and link related issues. Include before/after screenshots for sprite, CSS, or rendering changes. Adding a character requires its registry entry (with the six-slot 3D `theme`) and a matching 128×128 PNG. Never commit `.env`, `.env.local`, API keys, or generated files containing secrets.

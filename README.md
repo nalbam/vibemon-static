@@ -4,13 +4,15 @@ Static assets (registry JSON, character PNGs) served via GitHub Pages from the `
 
 ## About
 
-This repository is the canonical asset home for VibeMon - a real-time status monitor for AI assistants (Claude Code, Codex, Kiro, OpenClaw) with pixel art characters. The canonical rendering modules also live here: `js/vibemon-engine.js` and `js/vibemon-bubble.js`/`css/vibemon-bubble.css` are the source of truth, vendored at build time by the Desktop app ([vibemon-app](https://github.com/opspresso/vibemon-app)) and the dashboard ([vibemon-web](https://github.com/opspresso/vibemon-web) `src/vendor/`, which vendors the full modules but imports only the engine and the bubble module's pure helpers). No page on this site imports them at runtime — `index.html` is a pure redirect.
+This repository is the canonical asset home for VibeMon - a real-time status monitor for AI assistants (Claude Code, Codex, Kiro, OpenClaw) with pixel art characters. The canonical rendering modules also live here: `js/vibemon-engine.js` (2D), `js/vibemon-engine-3d.js` + `js/monster-states.js` (3D), and `js/vibemon-bubble.js`/`css/vibemon-bubble.css` are the source of truth, vendored at build time by the Desktop app ([vibemon-app](https://github.com/opspresso/vibemon-app)) and the dashboard ([vibemon-web](https://github.com/opspresso/vibemon-web) `src/vendor/`, which vendors the full modules but imports only the engine and the bubble module's pure helpers). No page on this site imports them at runtime — `index.html` is a pure redirect.
 
 ## Files
 
 The `docs` folder contains:
 - `index.html` - Redirects to https://vibemon.io/ (this site serves assets only)
-- `js/vibemon-engine.js` - Character rendering engine (source of truth; vendored by vibemon-app and vibemon-web at build time)
+- `js/vibemon-engine.js` - 2D character rendering engine (source of truth; vendored by vibemon-app and vibemon-web at build time)
+- `js/vibemon-engine-3d.js` - 3D pet rendering engine (source of truth; vendored by vibemon-app at build time). Ships no dependencies: the consumer passes its own three.js namespace as `options.THREE` to `createVibeMonEngine()`.
+- `js/monster-states.js` - 3D state animations and palette fallback (source of truth; imported by `vibemon-engine-3d.js`)
 - `js/vibemon-bubble.js` - Speech-bubble rendering (source of truth; vendored by vibemon-app at build time; vibemon-web vendors the full module but imports only its pure helpers)
 - `css/vibemon-bubble.css` - Speech-bubble styles (source of truth; vendored by vibemon-app at build time)
 - `characters/` - Character images (vibemon.png, clawd.png, codex.png, kiro.png, claw.png, daangni.png)
@@ -32,7 +34,8 @@ dashboard ([vibemon-web](https://github.com/opspresso/vibemon-web)):
 To change a state or character, edit the registry here — consumers fetch at
 runtime (with bundled fallbacks) or verify their vendored copies against
 these files. Adding a character requires both the registry entry in
-`data/characters.json` and a 128x128 PNG in `characters/`.
+`data/characters.json` (including its 3D `theme`) and a 128x128 PNG in
+`characters/`; no code change is needed in the consuming apps.
 
 ### States
 
@@ -58,7 +61,13 @@ these files. Adding a character requires both the registry entry in
 - `claw` - Red (OpenClaw)
 - `daangni` - Peach/teal (Daangn)
 
-Each `data/characters.json` entry defines `displayName`/`color`/`image`/`eyes`/`effect`. Optional overlay colors override the near-black defaults for characters with a dark face: `eyeColor` sets the blink/happy stroke color (default `#000000`) and `glassesColor` sets the glasses frame color (default `#111111`).
+Each `data/characters.json` entry defines `displayName`/`color`/`image`/`eyes`/`effect`/`theme`. Optional overlay colors override the near-black defaults for characters with a dark face: `eyeColor` sets the blink/happy stroke color (default `#000000`) and `glassesColor` sets the glasses frame color (default `#111111`).
+
+`color` is the 2D sprite's eye/accent overlay (white for VibeMon), *not* a body color. The 3D engine paints a different rig, so each entry carries a required `theme` with six `#RRGGBB` slots — `body` (slime body), `belly` (belly patch/paws), `accent` (horns/tail tip), `eye`, `blush`, `flame` (vibe flame glow):
+
+```json
+"theme": { "body": "#4886FC", "belly": "#8FB5FF", "accent": "#1F63F1", "eye": "#1C2745", "blush": "#76A5FF", "flame": "#9DB8FF" }
+```
 
 ## Access
 
@@ -75,8 +84,10 @@ vibemon-static/
 │   ├── favicon.ico
 │   ├── CNAME           # Custom domain (static.vibemon.io)
 │   ├── js/
-│   │   ├── vibemon-engine.js  # Character rendering engine (source of truth)
-│   │   └── vibemon-bubble.js  # Speech-bubble rendering (source of truth)
+│   │   ├── vibemon-engine.js     # 2D character rendering engine (source of truth)
+│   │   ├── vibemon-engine-3d.js  # 3D pet rendering engine (source of truth)
+│   │   ├── monster-states.js     # 3D state animations / palette fallback
+│   │   └── vibemon-bubble.js     # Speech-bubble rendering (source of truth)
 │   ├── css/
 │   │   └── vibemon-bubble.css # Speech-bubble styles (source of truth)
 │   ├── data/

@@ -1,0 +1,183 @@
+/**
+ * VibeMon state/theme definitions for the 3D engine (vibemon-engine-3d.js).
+ *
+ * Pure data + math — no three.js import — so a consumer's test runner can
+ * load it in a sandbox and guard the invariants: every registry state has an
+ * animation and every move name is implemented. Character colors are not
+ * here; they live in each registry entry's `theme` (data/characters.json).
+ *
+ * The character is a digital vibe monster: a squishy horned creature with a
+ * spade tail and a "vibe flame" burning above its head. The flame is the
+ * session's energy made visible — each state sets a `vibe` level that
+ * drives the flame's size and flicker plus the tail sway. State motion is
+ * creature behavior (gazing around, waving, tail-tapping, scanning,
+ * circling, pulsing, coiling, popping up, pirouetting, nodding off,
+ * sinking, shivering, darting glances) — except working, which mimes a
+ * furious typing frenzy.
+ *
+ * Pose values are sparse Euler rotations (radians) per joint, applied on
+ * top of the rig's rest pose. Moves are named procedural oscillators the
+ * engine implements (MOVE vocabulary below); they layer additive motion
+ * over the blended pose each frame.
+ */
+
+// Joints the rig exposes for posing. The vibe flame and tail also animate
+// continuously per state (vibe level) independent of posing.
+export const JOINTS = [
+  'root', 'body',
+  'armL', 'armR',
+  'tail1', 'tail2',
+  'flame'
+];
+
+// Procedural motion vocabulary. STATE_ANIMATIONS may only reference these;
+// the engine maps each name to an implementation.
+export const MOVES = [
+  'breathe',    // resting breathing swell
+  'lookAround', // slow curious gaze left and right
+  'ponder',     // tilting up and sideways, mulling something over
+  'orbitDrift', // drifting in a slow circle, leaning into the drift, surveying
+  'pulseFocus', // fast heartbeat pulse, energy gathering
+  'coil',       // rhythmic inward squeeze, arms pulled in, tail curling in
+  'popUp',      // springing upward to get attention, squashing before each hop
+  'twirl',      // joyful full 360-degree pirouette with a beat between spins
+  'hopJoy',     // happy hopping in place
+  'wiggle',     // playful side-to-side wobble
+  'shiver',     // hackles-up high-frequency trembling
+  'swell',      // puffing up big
+  'sink',       // drooping low, settling down
+  'stretch',    // waking-up stretch, arms reaching
+  'wave',       // raised-paw greeting wave
+  'tailTap',    // tail tip tapping a thinking rhythm
+  'scan',       // deliberate sweep side to side, dwelling at each end
+  'typeKeys',   // paws raised forward, hammering away in an alternating typing blur
+  'dartGlance', // sharp watchful glances snapping side to side
+  'nod'         // drowsy head slowly nodding off and drifting back up
+];
+
+// Eye rendering modes: 'open' shows the eyes, 'closed' shuts them to lines,
+// 'happy' swaps in the ^ ^ arcs.
+export const EYE_MODES = ['open', 'closed', 'happy'];
+
+/**
+ * Per-state animation definitions, keyed by the 10 registry state names.
+ *   eye      - EYE_MODES entry
+ *   eyeScale - relative eye size (wide-eyed alert vs normal)
+ *   blink    - whether the periodic blink cycle runs
+ *   speed    - global oscillator time scale for this state
+ *   vibe     - energy level: vibe-flame size/flicker + tail sway speed
+ *   pose     - sparse joint rotation targets (radians), blended smoothly
+ *   moves    - MOVES entries layered on top
+ * Unknown states fall back to `idle`.
+ */
+export const STATE_ANIMATIONS = {
+  // Waking up: a big stretch, then a one-paw greeting wave (asymmetric on
+  // purpose so it reads differently from notification's both-arms-up).
+  start: {
+    eye: 'open', eyeScale: 1, blink: false, speed: 1.3, vibe: 1.6,
+    pose: { armR: { z: -2.2 } },
+    moves: ['stretch', 'wave']
+  },
+  // Loafing around: breathing, gazing about, idly tapping the tail tip.
+  idle: {
+    eye: 'open', eyeScale: 1, blink: true, speed: 1, vibe: 1,
+    pose: {},
+    moves: ['breathe', 'lookAround', 'tailTap']
+  },
+  // Mulling it over: chin lifted, tilting side to side, tail tapping a
+  // thinking rhythm.
+  thinking: {
+    eye: 'open', eyeScale: 1, blink: true, speed: 0.9, vibe: 1.3,
+    pose: { body: { x: -0.12 } },
+    moves: ['ponder', 'tailTap']
+  },
+  // Surveying the terrain: circling slowly while sweeping its gaze,
+  // dwelling at each end of the sweep.
+  planning: {
+    eye: 'open', eyeScale: 1, blink: true, speed: 1.1, vibe: 1.5,
+    pose: {},
+    moves: ['orbitDrift', 'scan']
+  },
+  // Hammering away at the keys: hunched forward, paws typing in a blur,
+  // heart pounding.
+  working: {
+    eye: 'open', eyeScale: 1, blink: false, speed: 1.5, vibe: 2.2,
+    pose: { body: { x: 0.18 }, armL: { z: 0.1 }, armR: { z: -0.1 } },
+    moves: ['typeKeys', 'pulseFocus']
+  },
+  // Compressing itself: arms hugged in, squeezing down rhythmically, tail
+  // curling tight.
+  packing: {
+    eye: 'open', eyeScale: 1, blink: true, speed: 1.1, vibe: 0.9,
+    pose: { armL: { z: 0.15 }, armR: { z: -0.15 } },
+    moves: ['coil']
+  },
+  // "Over here!": both arms up, springing off the ground, wobbling eagerly.
+  notification: {
+    eye: 'open', eyeScale: 1.15, blink: false, speed: 1.5, vibe: 2,
+    pose: { armL: { z: 2.2 }, armR: { z: -2.2 } },
+    moves: ['popUp', 'wiggle']
+  },
+  // Celebrating: full pirouettes with happy hops, arms thrown up.
+  done: {
+    eye: 'happy', eyeScale: 1, blink: false, speed: 1.3, vibe: 2.4,
+    pose: { armL: { z: 2.5 }, armR: { z: -2.5 } },
+    moves: ['twirl', 'hopJoy']
+  },
+  // Dozing: sunk low, head drooped, slow deep breaths, nodding off.
+  sleep: {
+    eye: 'closed', eyeScale: 1, blink: false, speed: 0.35, vibe: 0.25,
+    pose: { body: { x: 0.3 } },
+    moves: ['sink', 'breathe', 'nod']
+  },
+  // Hackles up: puffed and trembling, snapping sharp glances side to side.
+  alert: {
+    eye: 'open', eyeScale: 1.35, blink: false, speed: 1.9, vibe: 2.6,
+    pose: { armL: { z: 1.2 }, armR: { z: -1.2 } },
+    moves: ['shiver', 'swell', 'dartGlance']
+  }
+};
+
+/**
+ * Fallback palette (VibeMon purple), used when a registry entry carries no
+ * usable `theme`. The canonical registry requires one on every character, so
+ * this covers a remote copy whose palette was dropped in sanitization.
+ * Same shape as `theme` in data/characters.json:
+ *   body   - slime body color
+ *   belly  - belly patch / paws
+ *   accent - horns / spade tail tip
+ *   eye    - eye / happy-arc / mouth color
+ *   blush  - cheek patches
+ *   flame  - vibe flame glow color
+ */
+export const DEFAULT_THEME = {
+  body: '#8B7CF6', belly: '#EDE9FF', accent: '#C4B5FD', eye: '#241B3A', blush: '#FF9EC4', flame: '#7DF9FF'
+};
+
+/**
+ * Resolve the 3D palette for a character from its registry entry, so a
+ * character added to the registry renders in 3D without a code change. Note
+ * the entry's top-level `color` is the 2D sprite's eye/accent overlay, not a
+ * body color — only `theme` describes the monster.
+ */
+export function getCharacterTheme(registryEntry) {
+  if (registryEntry && registryEntry.theme) return registryEntry.theme;
+  return DEFAULT_THEME;
+}
+
+/** Resolve the animation for a state name, falling back to idle. */
+export function getStateAnimation(state) {
+  return STATE_ANIMATIONS[state] || STATE_ANIMATIONS.idle;
+}
+
+export function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+/**
+ * Frame-rate independent smoothing factor: how far to move toward a target
+ * this frame given dt seconds and a responsiveness rate (1/s).
+ */
+export function dampFactor(rate, dt) {
+  return 1 - Math.exp(-rate * dt);
+}
